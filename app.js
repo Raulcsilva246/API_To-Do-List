@@ -1,38 +1,48 @@
 const express = require("express");
 const cors = require("cors");
-const fs = require("fs-extra");
-const path = require("path");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-const DB_PATH = path.join(__dirname, "BD.json");
+const axios = require("axios");
+const { BIN_ID, API_KEY } = require("./config");
 
 async function lerBanco() {
-  return await fs.readJson(DB_PATH);
+  const response = await axios.get(
+    `https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,
+    {
+      headers: {
+        "X-Master-Key": API_KEY,
+      },
+    },
+  );
+
+  return response.data.record;
 }
 
 async function salvarBanco(dados) {
-  await fs.writeJson(DB_PATH, dados, { spaces: 2 });
+  await axios.put(`https://api.jsonbin.io/v3/b/${BIN_ID}`, dados, {
+    headers: {
+      "X-Master-Key": API_KEY,
+      "Content-Type": "application/json",
+    },
+  });
 }
 
 // Buscar todas as tarefas
 app.get("/tarefas", async (req, res) => {
   const banco = await lerBanco();
 
-  console.log(
-    JSON.stringify(banco, null, 2)
-  );
+  console.log(JSON.stringify(banco, null, 2));
 
   res.json(banco.tarefas);
 });
 
 // Criar tarefa
 app.post("/tarefas", async (req, res) => {
-    
-      console.log("POST /tarefas");
+  console.log("POST /tarefas");
   console.log(req.body);
   const { titulo } = req.body;
 
@@ -63,9 +73,7 @@ app.put("/tarefas/:id", async (req, res) => {
 
   const banco = await lerBanco();
 
-  const tarefa = banco.tarefas.find(
-    (item) => item.id === id
-  );
+  const tarefa = banco.tarefas.find((item) => item.id === id);
 
   if (!tarefa) {
     return res.status(404).json({
@@ -86,9 +94,7 @@ app.delete("/tarefas/:id", async (req, res) => {
 
   const banco = await lerBanco();
 
-  banco.tarefas = banco.tarefas.filter(
-    (item) => item.id !== id
-  );
+  banco.tarefas = banco.tarefas.filter((item) => item.id !== id);
 
   await salvarBanco(banco);
 
